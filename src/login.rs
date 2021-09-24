@@ -11,7 +11,7 @@ mod imp {
     use super::*;
     use adw::subclass::prelude::BinImpl;
     use glib::subclass::Signal;
-    use gtk::{gio, CompositeTemplate};
+    use gtk::{gio, CompositeTemplate, PasswordEntry};
     use once_cell::sync::Lazy;
     use std::cell::Cell;
 
@@ -100,7 +100,26 @@ mod imp {
             settings
                 .bind("use-test-dc", use_test_dc_switch, "state")
                 .build();
+
+            connect_password_entry_activate(&*self_.custom_encryption_key_entry, "login.next");
+            connect_entry_activate(&*self_.phone_number_entry, "login.next");
+            connect_entry_activate(&*self_.code_entry, "login.next");
+            connect_entry_activate(&*self_.phone_number_entry, "login.next");
         }
+    }
+
+    // PasswordEntry does not seem to be a subclass of Entry and also does not implement EntryExt
+    // So, unfortunetely this redunant function is necessary.
+    fn connect_password_entry_activate(entry: &PasswordEntry, action: &'static str) {
+        entry.connect_activate(move |this| {
+            this.activate_action(action, None);
+        });
+    }
+
+    fn connect_entry_activate<W: WidgetExt + EntryExt>(entry: &W, action: &'static str) {
+        entry.connect_activate(move |this| {
+            this.activate_action(action, None);
+        });
     }
 
     impl WidgetImpl for Login {}
@@ -126,7 +145,6 @@ impl Login {
     pub fn login_client(&self, client_id: i32) {
         let self_ = imp::Login::from_instance(self);
         self_.client_id.set(client_id);
-        self_.content.set_visible_child_name("phone-number-page");
 
         self_.phone_number_entry.set_text("");
         self_.custom_encryption_key_entry.set_text("");
@@ -149,11 +167,14 @@ impl Login {
                 self.send_encryption_key(true);
             }
             AuthorizationState::WaitPhoneNumber => {
+                self_.content.set_visible_child_name("phone-number-page");
                 self.unfreeze();
+                self_.phone_number_entry.grab_focus();
             }
             AuthorizationState::WaitCode(_) => {
                 self_.content.set_visible_child_name("code-page");
                 self.unfreeze();
+                self_.code_entry.grab_focus();
             }
             AuthorizationState::WaitOtherDeviceConfirmation(_) => {
                 todo!()
@@ -164,6 +185,7 @@ impl Login {
             AuthorizationState::WaitPassword(_) => {
                 self_.content.set_visible_child_name("password-page");
                 self.unfreeze();
+                self_.password_entry.grab_focus();
             }
             AuthorizationState::Ready => {
                 self.emit_by_name("new-session", &[]).unwrap();
@@ -175,6 +197,9 @@ impl Login {
     fn previous(&self) {
         let self_ = imp::Login::from_instance(self);
         self_.content.set_visible_child_name("phone-number-page");
+
+        // grab focus for entry after reset
+        self_.phone_number_entry.grab_focus();
     }
 
     fn next(&self) {
@@ -289,6 +314,9 @@ impl Login {
                         encryption_key_error_label.set_visible(true);
 
                         obj.unfreeze();
+
+                        // grab focus for entry again after error
+                        self_.encryption_key_entry.grab_focus();
                     }
                 }
             }),
@@ -312,6 +340,9 @@ impl Login {
                     let self_ = imp::Login::from_instance(&obj);
                     self_.welcome_page_error_label.set_text(&err.message);
                     self_.welcome_page_error_label.set_visible(true);
+
+                    // grab focus for entry again after error
+                    self_.custom_encryption_key_entry.grab_focus();
                 }
             }),
         );
@@ -336,6 +367,9 @@ impl Login {
                     self_.welcome_page_error_label.set_visible(true);
 
                     obj.unfreeze();
+
+                    // grab focus for entry again after error
+                    self_.phone_number_entry.grab_focus();
                 }
             }),
         );
@@ -360,6 +394,9 @@ impl Login {
                     self_.code_error_label.set_visible(true);
 
                     obj.unfreeze();
+
+                    // grab focus for entry again after error
+                    self_.code_entry.grab_focus();
                 }
             }),
         );
@@ -384,6 +421,9 @@ impl Login {
                     self_.password_error_label.set_visible(true);
 
                     obj.unfreeze();
+
+                    // grab focus for entry again after error
+                    self_.password_entry.grab_focus();
                 }
             }),
         );
