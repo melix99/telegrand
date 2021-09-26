@@ -12,7 +12,7 @@ indexmap = "1.7"
 locale_config = "0.3"
 log = "0.4"
 once_cell = "1.8"
-pretty_env_logger = "0.4"
 regex = "1.5"
+syslog = "5.0"
 tdgrand = { git = "https://github.com/melix99/tdgrand", branch = "main" }
 tokio = { version = "1.12", features = ["rt-multi-thread"] }

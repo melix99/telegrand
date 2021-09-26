@@ -6,6 +6,9 @@ mod session;
 mod utils;
 mod window;
 
+use std::env;
+use std::str::FromStr;
+
 use self::application::Application;
 use self::login::Login;
 use self::session::Session;
@@ -14,14 +17,22 @@ use self::window::Window;
 use config::{GETTEXT_PACKAGE, LOCALEDIR, RESOURCES_FILE};
 use gettextrs::LocaleCategory;
 use gtk::{gio, glib};
+use log::LevelFilter;
 use once_cell::sync::Lazy;
+use syslog::Facility;
 
 pub static RUNTIME: Lazy<tokio::runtime::Runtime> =
     Lazy::new(|| tokio::runtime::Runtime::new().unwrap());
 
 fn main() {
     // Initialize logger
-    pretty_env_logger::init();
+    syslog::init(
+        Facility::LOG_USER,
+        LevelFilter::from_str(&env::var("RUST_LOG").unwrap_or_else(|_| String::from("info")))
+            .expect("error on parsing log-level"),
+        Some("telegrand"),
+    )
+    .expect("could not initialize logging");
 
     // Prepare i18n
     gettextrs::setlocale(LocaleCategory::LcAll, "");
